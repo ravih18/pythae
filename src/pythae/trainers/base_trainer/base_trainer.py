@@ -656,31 +656,30 @@ class BaseTrainer:
                     uses_ddp=self.distributed,
                 )
 
-                loss = model_output.loss
-                recon_loss = model_output.recon_loss
-                kld = model_output.reg_loss
+            self._optimizers_step(model_output)
 
-            # Scales loss.  Calls backward() on scaled loss to create scaled gradients.
-            # Backward passes under autocast are not recommended.
-            # Backward ops run in the same dtype autocast chose for corresponding forward ops.
-            self.scaler.scale(loss).backward()
+            loss = model_output.loss
+            recon_loss = model_output.recon_loss
+            kld = model_output.reg_loss
 
-            # Unscales the gradients of optimizer's assigned params in-place
-            self.scaler.unscale_(self.optimizer)
+            # # Scales loss.  Calls backward() on scaled loss to create scaled gradients.
+            # # Backward passes under autocast are not recommended.
+            # # Backward ops run in the same dtype autocast chose for corresponding forward ops.
+            # self.scaler.scale(loss).backward()
 
-            # Since the gradients of optimizer's assigned params are unscaled, clips as usual:
-            clip_grad_norm_(self.model.parameters(), 1)
+            # # Unscales the gradients of optimizer's assigned params in-place
+            # self.scaler.unscale_(self.optimizer)
 
-            # scaler.step() first unscales the gradients of the optimizer's assigned params.
-            # If these gradients do not contain infs or NaNs, optimizer.step() is then called,
-            # otherwise, optimizer.step() is skipped.
-            self.scaler.step(self.optimizer)
+            # # Since the gradients of optimizer's assigned params are unscaled, clips as usual:
+            # clip_grad_norm_(self.model.parameters(), 1)
 
-            # Updates the scale for the next iteration
-            self.scaler.update()
+            # # scaler.step() first unscales the gradients of the optimizer's assigned params.
+            # # If these gradients do not contain infs or NaNs, optimizer.step() is then called,
+            # # otherwise, optimizer.step() is skipped.
+            # self.scaler.step(self.optimizer)
 
-            # self._optimizers_step(model_output)
-            # loss = model_output.loss
+            # # Updates the scale for the next iteration
+            # self.scaler.update()
 
             epoch_loss += loss.item()
             epoch_recon_loss += recon_loss.item()
@@ -700,8 +699,8 @@ class BaseTrainer:
             self.model.update()
 
         epoch_loss /= len(self.train_loader)
-        epoch_recon_loss /= len(self.eval_loader)
-        epoch_kld /= len(self.eval_loader)
+        epoch_recon_loss /= len(self.train_loader)
+        epoch_kld /= len(self.train_loader)
 
         return epoch_loss, epoch_recon_loss, epoch_kld
 
